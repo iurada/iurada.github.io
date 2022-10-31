@@ -1,0 +1,22 @@
+.times {
+    font-family: 'Times New Roman', Times, serif;
+    font-weight: bold;
+    color: white;
+}
+
+.container {
+    width: 94vw;
+    height: 98vh;
+}
+
+.bg {
+    z-index: -1;
+    position: absolute;
+    width: inherit;
+    height: inherit;
+    -o-filter: blur(15px);
+    filter: blur(15px);
+    object-fit: cover;
+    transform: scale(1.04);
+    overflow: hidden;
+}
