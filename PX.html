@@ -25,6 +25,7 @@
   <script src="./static/js/bulma-carousel.min.js"></script>
   <script src="./static/js/bulma-slider.min.js"></script>
   <script src="./static/js/index.js"></script>
+  <script defer id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
@@ -194,11 +195,171 @@
 </section>
 
 
-<section class="section">
+<section class="section" style="padding-bottom: 1rem;">
   <div class="container is-max-desktop">
+
+    <!-- Method -->
+    <!--div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Method</h2>
+
+        <h3 class="title is-4">Problem Formulation</h3>
+        <div class="content has-text-justified">
+          <p>
+            We start with a neural network \(f: \mathbb{R}^d \rightarrow \mathbb{R}^K \) parametrized by \( \theta \in \mathbb{R}^m\)
+            and a dataset of \(N\) data points \((X, Y) = \{(x_i,y_i)\}_{i=1}^N\) where \(x_i \in \mathbb{R}^d\) and \(y_i \in \{1,...,K\}\).
+            The problem of <i>unstructured</i> neural network pruning is formalized as finding a binary mask \(M \in \{0,1\}^m\) that
+            optimizes the objective:
+            \[\min_M \frac{1}{N} \sum_{i=1}^N \mathcal{L}(f(x_i ; \mathcal{A}(\theta_0, M) \odot M), y_i)\]
+            \[\text{s.t.}~ M \in \{0,1\}^m, ~ \|M\|_0 / m \leq 1 - q\]
+            where \(\mathcal{L}\) is the loss function, \(q\) is the desired sparsity, \(\theta_0\) are the initial parameters and
+            \(\mathcal{A}\) is an optimization algorithm (<i>e.g.</i> SGD, Adam). The binary mask \(M\) is used to retain only the most
+            significant weights based on a saliency score.
+          </p>
+        </div>
+
+        <h3 class="title is-4">Neural Tangent Kernel and Pruning</h3>
+        <div class="content has-text-justified">
+          <p>
+            In the <i>gradient flow</i> regime (i.e. continuous-time gradient descent, with learning rate \(\alpha\)) we
+            can use a first-order Taylor expansion to approximate the network's output at a time step \(t\) of the optimization 
+            process:
+            \[f(X,\theta_{t+1}) = f(X,\theta_{t}) - \alpha \Theta_t(X,X)\nabla_f\mathcal{L}\]
+            The matrix \(\Theta_t(X,X) = \nabla_\theta f(X,\theta_t)\nabla_\theta f(X,\theta_t)^\top \in \mathbb{R}^{NK \times NK}\)
+            is the <i>Neural Tangent Kernel</i> at time step \(t\) [<a target="_blank" href="https://proceedings.neurips.cc/paper/2018/file/5a4be1fa34e62bb8a6ec6b91d2462f5a-Paper.pdf">1</a>].
+            Further works [<a target="_blank" href="https://proceedings.neurips.cc/paper_files/paper/2019/file/0d1a9651497a38d8b1c3871c84528bd4-Paper.pdf">2</a>] observed that the NTK can approximate
+            the training dynamics of networks of any depth without necessarily being infinitely wide by rendering its theory usable
+            in practice. 
+            The NTK's eigenspectrum encapsulate crucial information about their model and offer an appealing way to evaluate the alignment between two networks.
+            Models sharing the same NTK exhibit similar training dynamics [<a target="_blank" href="https://arxiv.org/pdf/2304.02840">2</a>], 
+            even with different parameter counts. Empirical results indicate that sparse subnetworks maintaining the
+            NTK's largest eigenvalues of their dense counterpart converge more rapidly [<a target="_blank" href="https://arxiv.org/pdf/2304.02840">2</a>, <a target="_blank" href="https://arxiv.org/pdf/2002.07376">3</a>] and better replicate the training
+            dynamics of denser networks [<a target="_blank" href="https://arxiv.org/pdf/1910.08720">4</a>, <a target="_blank" href="https://proceedings.neurips.cc/paper_files/paper/2019/file/253f7b5d921338af34da817c00f42753-Paper.pdf">5</a>].
+          </p>
+
+          <p>
+            [<a target="_blank" href="">6</a>] shows how to formulate a decomposition neural networks into their input-output paths. Current
+          </p>
+        </div>
+    </div-->
+    <div class="columns is-centered has-text-justified">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Method</h2>
+        <p>
+          Our paper introduces a novel pruning algorithm, Path eXclusion (PX), designed to enhance the efficiency of neural 
+          networks by pruning at initialization. Leveraging Neural Tangent Kernel (NTK) theory, PX focuses on identifying 
+          and retaining the most critical network paths, ensuring minimal performance loss even when the network is transferred 
+          to new tasks. 
+        </p>
+        <br>
+        <p>
+          The PX algorithm iteratively prunes network weights that have minimal impact on the NTK trace, thus preserving 
+          essential paths and maintaining the training dynamics of the resulting subnetwork aligned with its dense counterpart. 
+          Improving on current pruning methods focusing on the NTK theory, our approach leverages a new upper bound for the NTK 
+          trace, which takes into account the network's input-output paths based on <b>architecture and weight values</b> 
+          (captured by the Path Kernel \(J_\theta^v\)) and <b>how data maps onto such paths</b> (captured by the Path Activation 
+          Matrix \(J_v^f(X)\)). Formally, our upper bound is defined as
+          \[\text{Tr}[\Theta(X,X)] = \|\nabla_\theta f(X,\theta)\|_F^2 = \|J_v^f(X) J_\theta^v \|_F^2 \leq \|J_v^f(X)\|_F^2 \cdot \|J_\theta^v \|_F^2, \]
+          which can be efficiently computed using automatic differentiation.
+        </p>
+    </div>
 
     
 
+
+    <!--/ Method -->
+  </div>
+
+  <div class="columns is-centered has-text-justified">
+    <div class="column is-full-width">
+      <h3 class="title is-4">Key Steps in PX Algorithm</h3>
+      <div class="content has-text-justified">
+        <p>
+          <ul>
+            <li><b>NTK Theory and Network Paths.</b> Utilizing NTK theory to express its trace via network paths, providing a robust theoretical foundation for pruning.</li>
+            <li><b>Path eXclusion (PX).</b> Pruning weights based on their impact on the NTK trace, ensuring that crucial network paths are retained. The saliency function derived from the NTK trace ensures positive scores for parameters, preventing layer collapse.</li>
+            <li><b>Iterative Pruning Process.</b> Gradually refining the mask to focus on the most significant connections, enhancing efficiency and performance.</li>
+          </ul>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-bottom: 1rem;">
+  <div class="container is-max-desktop">
+    <!-- Main Results -->
+    <div class="columns is-centered has-text-justified">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Main Results</h2>
+        <p>
+          PX demonstrates robust performance across various neural network architectures and tasks, 
+          including large pre-trained vision models. It maintains the transferability and effectiveness of 
+          pruned networks. The algorithm's theoretical rigor and practical efficiency make it a versatile 
+          tool for modern neural network pruning.
+        </p>
+        <br>
+
+        <h3 class="title is-4">Pruning Randomly Initialized Networks</h3>
+        <div class="hero-body has-text-centered">
+          <figure>
+            <img src="./static/images/CIFAR10_ResNet20_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet20 Random Init." width="32%">
+            <img src="./static/images/CIFAR100_VGG16_nc.png" alt="Path eXclusion (PX) on CIFAR100 - VGG16 Random Init." width="32%">
+            <img src="./static/images/TinyImageNet_ResNet18_nc.png" alt="Path eXclusion (PX) on Tiny-ImageNet - ResNet18 Random Init." width="32%">
+            <img src="./static/images/classification_legend.png" alt="Path eXclusion (PX) on Random Init." width="75%">
+            <figcaption class="has-text-justified">Figure 2. Average classification accuracy at different sparsity levels on CIFAR-10 using 
+              ResNet-20, CIFAR-100 using VGG-16 and TinyImageNet using ResNet-18, respectively. 
+              Each experiment is repeated three times. We report in shaded colors the standard deviation.
+            </figcaption>
+            <br>
+            <img src="./static/images/imagenet_random_init.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet20 Random Init." width="40%">
+            <figcaption class="has-text-justified">Table 1. Average classification accuracy at different sparsity ratios on the ImageNet dataset, using Kaiming normal initialized
+              ResNet-50 as backbone. Each experiment is repeated three times.
+              We report also the standard deviation. <b>Bold</b> indicates the best result. <u>Underline</u> the second best.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3 class="title is-4">Pruning Pre-trained Models</h3>
+        <div class="hero-body has-text-centered">
+          <figure>
+            <img src="./static/images/CIFAR10_ImageNet_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 ImageNet pretrain." width="32%">
+            <img src="./static/images/CIFAR10_MoCoV2_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 MoCoV2 pretrain." width="32%">
+            <img src="./static/images/CIFAR10_CLIP_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 CLIP pretrain." width="32%">
+
+            <img src="./static/images/CIFAR100_ImageNet_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 ImageNet pretrain." width="32%">
+            <img src="./static/images/CIFAR100_MoCoV2_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 MoCoV2 pretrain." width="32%">
+            <img src="./static/images/CIFAR100_CLIP_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 CLIP pretrain." width="32%">
+
+            <img src="./static/images/TinyImageNet_ImageNet_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 ImageNet pretrain." width="32%">
+            <img src="./static/images/TinyImageNet_MoCoV2_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 MoCoV2 pretrain." width="32%">
+            <img src="./static/images/TinyImageNet_CLIP_nc.png" alt="Path eXclusion (PX) on CIFAR10 - ResNet50 CLIP pretrain." width="32%">
+
+            <img src="./static/images/pretrain_legend.png" alt="Path eXclusion (PX) on pre-trained models." width="75%">
+            <figcaption class="has-text-justified">Figure 3. Average classification accuracy at different sparsity levels on CIFAR-10, CIFAR-100 and Tiny-ImageNet using pre-trained
+              ResNet-50 as architecture. The first column reports the results of starting from the supervised ImageNet pre-training. The second column
+              reports the performance when starting from the MoCov2 pre-training on ImageNet. Finally, in the third column we report the results when
+              starting from CLIP. Each experiment is repeated three times. We report in shaded colors the standard deviation.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3 class="title is-4">Pruning Semantic Segmentation Models</h3>
+        <div class="hero-body has-text-centered">
+          <figure>
+            <img src="./static/images/VOC2012_ImageNet_nc.png" alt="Path eXclusion (PX) on Pascal VOC 2012 - ResNet50 DeepLabV3+ ImageNet pretrain." width="32%">
+            <img src="./static/images/VOC2012_MoCoV2_nc.png" alt="Path eXclusion (PX) on Pascal VOC 2012 - ResNet50 DeepLabV3+ MoCoV2 pretrain." width="32%">
+            <img src="./static/images/VOC2012_DINO_nc.png" alt="Path eXclusion (PX) on Pascal VOC 2012 - ResNet50 DeepLabV3+ DINO pretrain." width="32%">
+
+            <img src="./static/images/segmentation_legend.png" alt="Path eXclusion (PX) on segmentation models." width="55%">
+            <figcaption class="has-text-justified">Figure 4. Average mean Intersection over Union (mIoU) at different sparsity levels on Pascal VOC2012 using DeepLabV3+ 
+              with pretrained ResNet-50 as the backbone. Each experiment is repeated three times. Standard deviations are in shaded colors.
+            </figcaption>
+          </figure>
+        </div>
+
+    </div>
+    <!--/ Main Results -->
   </div>
 </section>
 
